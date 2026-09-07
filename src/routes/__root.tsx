@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase } from "@/integrations/supabase/client";
 import { LovableWatermark } from "@/components/LovableWatermark";
+import { SettingsProvider } from "@/lib/settings";
 
 function NotFoundComponent() {
   return (
@@ -141,9 +142,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-      <Outlet />
-      <LovableWatermark />
+      <SettingsProvider>
+        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+        <Outlet />
+        <LovableWatermark />
+      </SettingsProvider>
     </QueryClientProvider>
   );
 }
