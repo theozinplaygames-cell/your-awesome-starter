@@ -2,6 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import { WorldMap } from "@/components/WorldMap";
 import { supabase } from "@/integrations/supabase/client";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useSettings } from "@/lib/settings";
 import {
   countryById,
   idsInRegion,
@@ -43,6 +45,7 @@ function pick(exclude?: string): CountryMeta {
 type Result = { ok: boolean; guessId: string } | null;
 
 function Game() {
+  const { t, countryName, regionName, subregionName } = useSettings();
   const [target, setTarget] = useState<CountryMeta | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [hints, setHints] = useState(0);
@@ -86,11 +89,11 @@ function Game() {
 
   const hintList = target
     ? [
-        { label: "Continente", value: target.region },
-        { label: "Região", value: target.subregion },
+        { label: t("continent"), value: regionName(target.region) },
+        { label: t("region"), value: subregionName(target.subregion) },
         {
-          label: "Idioma",
-          value: target.languages.length ? target.languages.join(", ") : "Sem idioma oficial",
+          label: t("language"),
+          value: target.languages.length ? target.languages.join(", ") : t("noLanguage"),
         },
       ]
     : [];
@@ -112,10 +115,10 @@ function Game() {
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="font-display text-xs uppercase tracking-[0.35em] text-accent">
-            Atlas Quiz
+            {t("brand")}
           </p>
           <h1 className="font-display text-3xl font-bold md:text-4xl">
-            Onde fica esse país?
+            {t("gameTitle")}
           </h1>
         </div>
         <div className="flex items-center gap-3">
@@ -123,11 +126,12 @@ function Game() {
             to={signedIn ? "/duelo" : "/auth"}
             className="font-display rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90"
           >
-            {signedIn ? "Duelo 1x1" : "Entrar para duelar"}
+            {signedIn ? t("duel") : t("signInToDuel")}
           </Link>
-          <Stat label="Pontos" value={score} />
-          <Stat label="Rodada" value={round} />
-          <Stat label="Sequência" value={streak} />
+          <Stat label={t("points")} value={score} />
+          <Stat label={t("round")} value={round} />
+          <Stat label={t("streak")} value={streak} />
+          <LanguageSwitcher />
         </div>
       </header>
 
@@ -150,26 +154,26 @@ function Game() {
         <aside className="flex flex-col gap-4">
           <div className="panel p-5">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              Encontre no mapa
+              {t("findOnMap")}
             </p>
             <p className="font-display mt-1 text-2xl font-bold text-primary">
-              {target?.name ?? "..."}
+              {countryName(target, "...")}
             </p>
             <p className="mt-3 text-sm text-muted-foreground">
               {finished
                 ? result?.ok
-                  ? `Acertou! +${POINTS[hints]!} pontos.`
-                  : `Errou. O país estava marcado em verde.`
+                  ? t("correctPlus", { n: POINTS[hints]! })
+                  : t("wrongMsg")
                 : selected
-                  ? "País selecionado. Confirme sua resposta."
-                  : "Clique em um país no mapa."}
+                  ? t("selectedMsg")
+                  : t("clickMsg")}
             </p>
             <button
               onClick={finished ? next : check}
               disabled={!finished && !selected}
               className="font-display mt-4 w-full rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {finished ? "Próximo país" : "Checar"}
+              {finished ? t("next") : t("check")}
             </button>
             {finished && (
               <div
@@ -180,17 +184,19 @@ function Game() {
                 }`}
               >
                 {result?.ok
-                  ? "Resposta correta"
-                  : `Você marcou ${countryById.get(result!.guessId)?.name ?? "outro país"}`}
+                  ? t("correctAnswer")
+                  : t("youPicked", {
+                      name: countryName(countryById.get(result!.guessId), t("otherCountry")),
+                    })}
               </div>
             )}
           </div>
 
           <div className="panel p-5">
             <div className="flex items-center justify-between">
-              <p className="font-display text-sm font-semibold">Dicas</p>
+              <p className="font-display text-sm font-semibold">{t("hints")}</p>
               <p className="text-xs text-muted-foreground">
-                Valem {POINTS[hints]!} pts
+                {t("worth", { n: POINTS[hints]! })}
               </p>
             </div>
             <div className="mt-3 flex flex-col gap-2">
@@ -215,7 +221,7 @@ function Game() {
               disabled={hints >= 3 || finished}
               className="mt-3 w-full rounded-xl border border-accent/60 px-4 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {hints >= 3 ? "Sem mais dicas" : `Revelar dica ${hints + 1} de 3`}
+              {hints >= 3 ? t("noMoreHints") : t("revealHint", { n: hints + 1, max: 3 })}
             </button>
           </div>
         </aside>
