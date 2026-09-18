@@ -163,46 +163,104 @@ function Game() {
         </div>
       </header>
 
+      <div className="panel flex w-fit gap-1 p-1">
+        {(["map", "flag"] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMode(m)}
+            className={`font-display rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+              mode === m
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {m === "map" ? t("modeMap") : t("modeFlag")}
+          </button>
+        ))}
+      </div>
+
       <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
         <section className="panel overflow-hidden p-2">
-          <WorldMap
-            selected={selected}
-            onSelect={(id) => {
-              if (!finished) setSelected(id);
-            }}
-            disabled={finished}
-            correctId={finished ? (target?.id ?? null) : null}
-            wrongId={result && !result.ok ? result.guessId : null}
-            highlightIds={outlineIds}
-
-            resetKey={round}
-          />
+          {mode === "map" ? (
+            <WorldMap
+              selected={selected}
+              onSelect={(id) => {
+                if (!finished) setSelected(id);
+              }}
+              disabled={finished}
+              correctId={finished ? (target?.id ?? null) : null}
+              wrongId={result && !result.ok ? result.guessId : null}
+              highlightIds={outlineIds}
+              resetKey={round}
+            />
+          ) : (
+            <div className="flex min-h-[320px] items-center justify-center p-6 md:min-h-[420px]">
+              {target && flagUrl(target.id) ? (
+                <img
+                  src={flagUrl(target.id)!}
+                  alt={t("whichFlag")}
+                  width={320}
+                  height={214}
+                  className="w-full max-w-sm rounded-xl border border-border shadow-lg"
+                />
+              ) : (
+                <p className="text-muted-foreground">...</p>
+              )}
+            </div>
+          )}
         </section>
 
         <aside className="flex flex-col gap-4">
           <div className="panel p-5">
             <p className="text-xs uppercase tracking-widest text-muted-foreground">
-              {t("findOnMap")}
+              {mode === "map" ? t("findOnMap") : t("whichFlag")}
             </p>
-            <p className="font-display mt-1 text-2xl font-bold text-primary">
-              {countryName(target, "...")}
-            </p>
+            {mode === "map" ? (
+              <p className="font-display mt-1 text-2xl font-bold text-primary">
+                {countryName(target, "...")}
+              </p>
+            ) : (
+              <input
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") (finished ? next : checkTyped)();
+                }}
+                disabled={finished}
+                placeholder={t("typeAnswer")}
+                autoComplete="off"
+                maxLength={60}
+                className="input-field mt-2 w-full"
+              />
+            )}
             <p className="mt-3 text-sm text-muted-foreground">
               {finished
                 ? result?.ok
                   ? t("correctPlus", { n: POINTS[hints]! })
-                  : t("wrongMsg")
-                : selected
-                  ? t("selectedMsg")
-                  : t("clickMsg")}
+                  : mode === "map"
+                    ? t("wrongMsg")
+                    : t("flagWrong", { name: countryName(target, t("otherCountry")) })
+                : mode === "flag"
+                  ? t("typeMsg")
+                  : selected
+                    ? t("selectedMsg")
+                    : t("clickMsg")}
             </p>
             <button
-              onClick={finished ? next : check}
-              disabled={!finished && !selected}
+              onClick={finished ? next : mode === "map" ? check : checkTyped}
+              disabled={!finished && (mode === "map" ? !selected : typed.trim().length === 0)}
               className="font-display mt-4 w-full rounded-xl bg-primary px-4 py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {finished ? t("next") : t("check")}
             </button>
+            {!finished && mode === "flag" && (
+              <button
+                onClick={next}
+                className="mt-2 w-full rounded-xl px-4 py-2 text-sm text-muted-foreground hover:text-foreground"
+              >
+                {t("skip")}
+              </button>
+            )}
             {finished && (
               <div
                 className={`mt-3 rounded-xl border px-3 py-2 text-sm ${
@@ -213,9 +271,11 @@ function Game() {
               >
                 {result?.ok
                   ? t("correctAnswer")
-                  : t("youPicked", {
-                      name: countryName(countryById.get(result!.guessId), t("otherCountry")),
-                    })}
+                  : mode === "flag"
+                    ? countryName(target, t("otherCountry"))
+                    : t("youPicked", {
+                        name: countryName(countryById.get(result!.guessId), t("otherCountry")),
+                      })}
               </div>
             )}
           </div>
