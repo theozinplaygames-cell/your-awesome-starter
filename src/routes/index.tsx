@@ -4,6 +4,7 @@ import { WorldMap } from "@/components/WorldMap";
 import { supabase } from "@/integrations/supabase/client";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useSettings } from "@/lib/settings";
+import { flagUrl, hasFlag, normalizeName } from "@/lib/flags";
 import {
   countryById,
   idsInRegion,
@@ -36,18 +37,23 @@ export const Route = createFileRoute("/")({
 
 const POINTS = [100, 70, 40, 20];
 
-function pick(exclude?: string): CountryMeta {
-  let c = quizPool[Math.floor(Math.random() * quizPool.length)]!;
-  while (c.id === exclude) c = quizPool[Math.floor(Math.random() * quizPool.length)]!;
+const flagPool = quizPool.filter((c) => hasFlag(c.id));
+
+function pick(pool: CountryMeta[], exclude?: string): CountryMeta {
+  let c = pool[Math.floor(Math.random() * pool.length)]!;
+  while (c.id === exclude && pool.length > 1) c = pool[Math.floor(Math.random() * pool.length)]!;
   return c;
 }
 
 type Result = { ok: boolean; guessId: string } | null;
+type Mode = "map" | "flag";
 
 function Game() {
   const { t, countryName, regionName, subregionName } = useSettings();
+  const [mode, setMode] = useState<Mode>("map");
   const [target, setTarget] = useState<CountryMeta | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [typed, setTyped] = useState("");
   const [hints, setHints] = useState(0);
   const [result, setResult] = useState<Result>(null);
   const [score, setScore] = useState(0);
