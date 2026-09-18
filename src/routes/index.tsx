@@ -69,28 +69,50 @@ function Game() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
+  const pool = mode === "flag" ? flagPool : quizPool;
+
   useEffect(() => {
-    setTarget(pick());
-  }, []);
+    setTarget(pick(mode === "flag" ? flagPool : quizPool));
+    setSelected(null);
+    setTyped("");
+    setHints(0);
+    setResult(null);
+  }, [mode]);
 
   const next = useCallback(() => {
-    setTarget((t) => pick(t?.id));
+    setTarget((c) => pick(pool, c?.id));
     setSelected(null);
+    setTyped("");
     setHints(0);
     setResult(null);
     setRound((r) => r + 1);
-  }, []);
+  }, [pool]);
 
-  const check = () => {
-    if (!target || !selected || result) return;
-    const ok = selected === target.id;
-    setResult({ ok, guessId: selected });
+  const score_ = (ok: boolean) => {
     if (ok) {
       setScore((s) => s + POINTS[hints]!);
       setStreak((s) => s + 1);
     } else {
       setStreak(0);
     }
+  };
+
+  const check = () => {
+    if (!target || !selected || result) return;
+    const ok = selected === target.id;
+    setResult({ ok, guessId: selected });
+    score_(ok);
+  };
+
+  const checkTyped = () => {
+    if (!target || result) return;
+    const guess = normalizeName(typed);
+    if (!guess) return;
+    const ok =
+      guess === normalizeName(target.name) ||
+      guess === normalizeName(target.en);
+    setResult({ ok, guessId: target.id });
+    score_(ok);
   };
 
   const hintList = target
